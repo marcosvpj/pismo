@@ -37,7 +37,7 @@ func TestServiceGetAccountExpectAccount(t *testing.T) {
 
 func TestServiceGetAccountExpectNotFound(t *testing.T) {
 	mockRepository := new(MockAccountRepository)
-	mockRepository.On("GetAccount", 1).Return(Account{}, nil)
+	mockRepository.On("GetAccount", 1).Return(Account{}, ErrNotFound)
 
 	service := NewService(mockRepository)
 
@@ -48,5 +48,5 @@ func TestServiceGetAccountExpectNotFound(t *testing.T) {
 	mockRepository.AssertExpectations(t)
 
 	assert.Equal(t, expectedAcc, acc)
-	assert.ErrorIs(t, ErrNotFound, err)
+	assert.ErrorIs(t, err, ErrNotFound)
 }
