@@ -26,5 +26,5 @@ func (s *Service) CreateAccount(ctx context.Context, account Account) (Account, 
 		return Account{}, ErrFieldDocumentNumberMissing
 	}
 
-	return s.repository.SaveAccount(ctx, account)
+	return s.repository.Save(ctx, account)
 }
