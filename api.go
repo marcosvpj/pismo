@@ -42,7 +42,7 @@ func (a *APIServer) getAccountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	acc, err := a.accountService.GetAccount(accountID)
+	acc, err := a.accountService.GetAccount(r.Context(), accountID)
 	if errors.Is(err, account.ErrNotFound) {
 		writeError(w, http.StatusNotFound, err.Error())
 		return

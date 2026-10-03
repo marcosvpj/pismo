@@ -1,6 +1,9 @@
 package account
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 type Service struct {
 	repository Repository
@@ -14,14 +17,14 @@ func NewService(repository Repository) *Service {
 	}
 }
 
-func (s *Service) GetAccount(accountID int) (Account, error) {
-	return s.repository.FindByID(accountID)
+func (s *Service) GetAccount(ctx context.Context, accountID int) (Account, error) {
+	return s.repository.FindByID(ctx, accountID)
 }
 
-func (s *Service) CreateAccount(account Account) (Account, error) {
+func (s *Service) CreateAccount(ctx context.Context, account Account) (Account, error) {
 	if account.DocumentNumber == "" {
 		return Account{}, ErrFieldDocumentNumberMissing
 	}
 
-	return s.repository.SaveAccount(account)
+	return s.repository.SaveAccount(ctx, account)
 }

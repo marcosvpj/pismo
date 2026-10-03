@@ -1,10 +1,13 @@
 package account
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 type Repository interface {
-	FindByID(accountID int) (Account, error)
-	SaveAccount(account Account) (Account, error)
+	FindByID(ctx context.Context, accountID int) (Account, error)
+	SaveAccount(ctx context.Context, account Account) (Account, error)
 }
 
 var ErrNotFound = errors.New("account not found")

@@ -77,6 +77,7 @@ func TestGetAccountEndpoint(t *testing.T) {
 			assert.Equal(t, test.expectedStatus, res.StatusCode)
 			assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
 			assert.JSONEq(t, test.expectedBody, string(body))
+			mockRepository.AssertExpectations(t)
 		})
 	}
 }
