@@ -37,7 +37,7 @@ func NewAPIServer(accountService *account.Service) *APIServer {
 
 func (a *APIServer) getAccountHandler(w http.ResponseWriter, r *http.Request) {
 	accountID, err := strconv.Atoi(r.PathValue("account_id"))
-	if err != nil || accountID == 0 {
+	if err != nil || accountID <= 0 {
 		writeError(w, http.StatusBadRequest, "invalid account id")
 		return
 	}
