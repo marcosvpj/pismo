@@ -1,8 +1,12 @@
 package account
 
+import "errors"
+
 type Service struct {
 	repository Repository
 }
+
+var ErrFieldDocumentNumberMissing = errors.New("field document_number is required")
 
 func NewService(repository Repository) *Service {
 	return &Service{
@@ -11,5 +15,13 @@ func NewService(repository Repository) *Service {
 }
 
 func (s *Service) GetAccount(accountID int) (Account, error) {
-	return s.repository.GetAccount(accountID)
+	return s.repository.FindByID(accountID)
+}
+
+func (s *Service) CreateAccount(account Account) (Account, error) {
+	if account.DocumentNumber == "" {
+		return Account{}, ErrFieldDocumentNumberMissing
+	}
+
+	return s.repository.SaveAccount(account)
 }

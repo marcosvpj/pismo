@@ -7,18 +7,9 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type MockAccountRepository struct {
-	mock.Mock
-}
-
-func (m *MockAccountRepository) GetAccount(accountID int) (Account, error) {
-	args := m.Called(accountID)
-	return args.Get(0).(Account), args.Error(1)
-}
-
 func TestServiceGetAccountExpectAccount(t *testing.T) {
 	mockRepository := new(MockAccountRepository)
-	mockRepository.On("GetAccount", 1).Return(Account{AccountID: 1, DocumentNumber: "12345678900"}, nil)
+	mockRepository.On("FindByID", 1).Return(Account{AccountID: 1, DocumentNumber: "12345678900"}, nil)
 
 	service := NewService(mockRepository)
 
@@ -37,7 +28,7 @@ func TestServiceGetAccountExpectAccount(t *testing.T) {
 
 func TestServiceGetAccountExpectNotFound(t *testing.T) {
 	mockRepository := new(MockAccountRepository)
-	mockRepository.On("GetAccount", 1).Return(Account{}, ErrNotFound)
+	mockRepository.On("FindByID", 1).Return(Account{}, ErrNotFound)
 
 	service := NewService(mockRepository)
 
@@ -49,4 +40,35 @@ func TestServiceGetAccountExpectNotFound(t *testing.T) {
 
 	assert.Equal(t, expectedAcc, acc)
 	assert.ErrorIs(t, err, ErrNotFound)
+}
+
+func TestCreateAccountExpectOk(t *testing.T) {
+	mockRepository := new(MockAccountRepository)
+	mockRepository.On("SaveAccount", Account{DocumentNumber: "12345678900"}).Return(Account{AccountID: 1, DocumentNumber: "12345678900"}, nil)
+
+	service := NewService(mockRepository)
+
+	acc, err := service.CreateAccount(Account{DocumentNumber: "12345678900"})
+
+	expectedAcc := Account{AccountID: 1, DocumentNumber: "12345678900"}
+
+	mockRepository.AssertExpectations(t)
+
+	assert.Equal(t, expectedAcc, acc)
+	assert.NoError(t, err)
+}
+
+func TestCreateAccountExpectMissingField(t *testing.T) {
+	mockRepository := new(MockAccountRepository)
+
+	service := NewService(mockRepository)
+
+	acc, err := service.CreateAccount(Account{DocumentNumber: ""})
+
+	expectedAcc := Account{}
+
+	mockRepository.AssertNotCalled(t, "SaveAccount", mock.Anything)
+
+	assert.Equal(t, expectedAcc, acc)
+	assert.ErrorIs(t, err, ErrFieldDocumentNumberMissing)
 }
