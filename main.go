@@ -1,7 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"github.com/marcosvpj/pismo/account"
+)
 
 func main() {
-	fmt.Println("Hello Pismo!")
+	repository := account.NewMemoryRepository()
+	service := account.NewService(repository)
+	NewAPIServer(service).Serve()
 }

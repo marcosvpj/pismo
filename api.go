@@ -54,9 +54,32 @@ func (a *APIServer) getAccountHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, acc)
 }
 
+func (a *APIServer) postAccountHandler(w http.ResponseWriter, r *http.Request) {
+	var acc account.Account
+	err := json.NewDecoder(r.Body).Decode(&acc)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid account information")
+		return
+	}
+
+	createdAccount, err := a.accountService.CreateAccount(r.Context(), acc)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "error creating account")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, createdAccount)
+}
+
+func (a *APIServer) getIndexHandler(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, nil)
+}
+
 func (a *APIServer) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /accounts/{account_id}", a.getAccountHandler)
+	mux.HandleFunc("POST /accounts", a.postAccountHandler)
+	mux.HandleFunc("GET /", a.getIndexHandler)
 	return mux
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"net/http"
@@ -81,3 +82,28 @@ func TestGetAccountEndpoint(t *testing.T) {
 		})
 	}
 }
+
+func TestCreateAccountEndpoint(t *testing.T) {
+	mockRepository := new(account.MockAccountRepository)
+	mockRepository.On("Save", account.Account{DocumentNumber: "12345678900"}).Return(account.Account{AccountID: 1, DocumentNumber: "12345678900"}, nil)
+	accountService := account.NewService(mockRepository)
+	api := NewAPIServer(accountService)
+
+	payload := bytes.NewBufferString(`{"document_number":"12345678900"}`)
+	req := httptest.NewRequest(http.MethodPost, "/accounts", payload)
+	w := httptest.NewRecorder()
+
+	api.Routes().ServeHTTP(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+
+	assert.Equal(t, http.StatusCreated, res.StatusCode)
+	assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
+	assert.JSONEq(t, `{"account_id":1,"document_number":"12345678900"}`, string(body))
+	mockRepository.AssertExpectations(t)
+}
+
+// todo: test cases for create account endpoint for each error possible
