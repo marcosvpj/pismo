@@ -54,8 +54,12 @@ func (a *APIServer) getAccountHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, acc)
 }
 
+type createAccountRequest struct {
+	DocumentNumber string `json:"document_number"`
+}
+
 func (a *APIServer) postAccountHandler(w http.ResponseWriter, r *http.Request) {
-	var acc account.Account
+	var acc createAccountRequest
 	err := json.NewDecoder(r.Body).Decode(&acc)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid account information")
@@ -75,13 +79,7 @@ func (a *APIServer) postAccountHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *APIServer) getHealthHandler(w http.ResponseWriter, r *http.Request) {
-	ok := struct {
-		status string
-	}{
-		status: "ok",
-	}
-
-	writeJSON(w, http.StatusOK, ok)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (a *APIServer) Routes() http.Handler {

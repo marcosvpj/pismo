@@ -29,10 +29,10 @@ func TestCreateAndRetrieveAccount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 	response, err := io.ReadAll(resp.Body)
-	defer resp.Body.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,10 +44,10 @@ func TestCreateAndRetrieveAccount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 
 	var acc account.Account
 	err = json.NewDecoder(resp.Body).Decode(&acc)
-	defer resp.Body.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

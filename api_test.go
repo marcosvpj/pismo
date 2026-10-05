@@ -19,12 +19,19 @@ func TestGetHealth(t *testing.T) {
 	server := httptest.NewServer(NewAPIServer(service).Routes())
 	defer server.Close()
 
-	resp, err := http.Get(server.URL + "/health")
+	res, err := http.Get(server.URL + "/health")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	assert.JSONEq(t, `{"status":"ok"}`, string(body))
 }
 
 func TestGetAccountEndpoint(t *testing.T) {
@@ -144,6 +151,13 @@ func TestCreateAccountEndpoint(t *testing.T) {
 			payload:        `{"document_number":"12345678900"}`,
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   `{"error": "error creating account"}`,
+		},
+		{
+			name:           "Error invalid JSON",
+			path:           "/accounts",
+			payload:        `{invalid`,
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error": "invalid account information"}`,
 		},
 	}
 
