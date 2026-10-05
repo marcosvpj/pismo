@@ -15,7 +15,7 @@ var _ Repository = (*MemoryRepository)(nil)
 
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{
-		accounts: make(map[int]Account, 0),
+		accounts: make(map[int]Account),
 		nextID:   1,
 	}
 }
@@ -24,12 +24,12 @@ func (r *MemoryRepository) FindByID(ctx context.Context, accountID int) (Account
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	for _, account := range r.accounts {
-		if account.AccountID == accountID {
-			return account, nil
-		}
+	acc, ok := r.accounts[accountID]
+	if !ok {
+		return Account{}, ErrNotFound
 	}
-	return Account{}, ErrNotFound
+
+	return acc, nil
 }
 
 func (r *MemoryRepository) Save(ctx context.Context, account Account) (Account, error) {
@@ -37,7 +37,7 @@ func (r *MemoryRepository) Save(ctx context.Context, account Account) (Account, 
 	defer r.mu.Unlock()
 
 	account.AccountID = r.nextID
-	r.nextID++
 	r.accounts[r.nextID] = account
+	r.nextID++
 	return account, nil
 }
