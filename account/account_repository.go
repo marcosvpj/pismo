@@ -11,15 +11,3 @@ type Repository interface {
 }
 
 var ErrNotFound = errors.New("account not found")
-
-type DB struct {
-}
-
-func (db *DB) FindByID(accountID int) (Account, error) {
-
-	return Account{}, nil
-}
-func (db *DB) Save(account Account) (Account, error) {
-
-	return Account{}, nil
-}

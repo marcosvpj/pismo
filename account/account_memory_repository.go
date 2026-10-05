@@ -1,28 +1,43 @@
 package account
 
-import "context"
+import (
+	"context"
+	"sync"
+)
 
 type MemoryRepository struct {
-	accounts []*Account
+	mu       sync.RWMutex
+	accounts map[int]Account
+	nextID   int
 }
+
+var _ Repository = (*MemoryRepository)(nil)
 
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{
-		accounts: make([]*Account, 0),
+		accounts: make(map[int]Account, 0),
+		nextID:   1,
 	}
 }
 
 func (r *MemoryRepository) FindByID(ctx context.Context, accountID int) (Account, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	for _, account := range r.accounts {
 		if account.AccountID == accountID {
-			return *account, nil
+			return account, nil
 		}
 	}
 	return Account{}, ErrNotFound
 }
 
 func (r *MemoryRepository) Save(ctx context.Context, account Account) (Account, error) {
-	account.AccountID = len(r.accounts) + 1
-	r.accounts = append(r.accounts, &account)
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	account.AccountID = r.nextID
+	r.nextID++
+	r.accounts[r.nextID] = account
 	return account, nil
 }

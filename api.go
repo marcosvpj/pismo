@@ -71,15 +71,21 @@ func (a *APIServer) postAccountHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, createdAccount)
 }
 
-func (a *APIServer) getIndexHandler(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, nil)
+func (a *APIServer) getHealthHandler(w http.ResponseWriter, r *http.Request) {
+	ok := struct {
+		status string
+	}{
+		status: "ok",
+	}
+
+	writeJSON(w, http.StatusOK, ok)
 }
 
 func (a *APIServer) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /accounts/{account_id}", a.getAccountHandler)
 	mux.HandleFunc("POST /accounts", a.postAccountHandler)
-	mux.HandleFunc("GET /", a.getIndexHandler)
+	mux.HandleFunc("GET /health", a.getHealthHandler)
 	return mux
 }
 

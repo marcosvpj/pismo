@@ -31,8 +31,14 @@ func TestCreateAndRetrieveAccount(t *testing.T) {
 	}
 
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
-	response, _ := io.ReadAll(resp.Body)
-	t.Log(string(response))
+	response, err := io.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedBody := `{"account_id":1, "document_number":"12345678900"}`
+	assert.JSONEq(t, expectedBody, string(response))
 
 	resp, err = http.Get(server.URL + "/accounts/1")
 	if err != nil {
@@ -41,6 +47,7 @@ func TestCreateAndRetrieveAccount(t *testing.T) {
 
 	var acc account.Account
 	err = json.NewDecoder(resp.Body).Decode(&acc)
+	defer resp.Body.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

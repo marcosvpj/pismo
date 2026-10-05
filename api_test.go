@@ -13,6 +13,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestGetHealth(t *testing.T) {
+	repository := account.NewMemoryRepository()
+	service := account.NewService(repository)
+	server := httptest.NewServer(NewAPIServer(service).Routes())
+	defer server.Close()
+
+	resp, err := http.Get(server.URL + "/health")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
 func TestGetAccountEndpoint(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -51,6 +65,18 @@ func TestGetAccountEndpoint(t *testing.T) {
 		{
 			name:           "Invalid account id",
 			path:           "/accounts/xxx",
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error":"invalid account id"}`,
+		},
+		{
+			name:           "Zero account id",
+			path:           "/accounts/0",
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error":"invalid account id"}`,
+		},
+		{
+			name:           "Negative account id",
+			path:           "/accounts/-1",
 			expectedStatus: http.StatusBadRequest,
 			expectedBody:   `{"error":"invalid account id"}`,
 		},
