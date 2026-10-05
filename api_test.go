@@ -110,26 +110,66 @@ func TestGetAccountEndpoint(t *testing.T) {
 }
 
 func TestCreateAccountEndpoint(t *testing.T) {
-	mockRepository := new(account.MockAccountRepository)
-	mockRepository.On("Save", account.Account{DocumentNumber: "12345678900"}).Return(account.Account{AccountID: 1, DocumentNumber: "12345678900"}, nil)
-	accountService := account.NewService(mockRepository)
-	api := NewAPIServer(accountService)
+	tests := []struct {
+		name           string
+		path           string
+		setup          func(m *account.MockAccountRepository)
+		payload        string
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name: "Create account",
+			path: "/accounts",
+			setup: func(m *account.MockAccountRepository) {
+				m.On("Save", account.Account{DocumentNumber: "12345678900"}).Return(account.Account{AccountID: 1, DocumentNumber: "12345678900"}, nil)
+			},
+			payload:        `{"document_number":"12345678900"}`,
+			expectedStatus: http.StatusCreated,
+			expectedBody:   `{"account_id": 1, "document_number": "12345678900"}`,
+		},
+		{
+			name:           "Error missing field",
+			path:           "/accounts",
+			payload:        `{"document_number":""}`,
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error": "field document_number is required"}`,
+		},
+		{
+			name: "Error 500",
+			path: "/accounts",
+			setup: func(m *account.MockAccountRepository) {
+				m.On("Save", account.Account{DocumentNumber: "12345678900"}).Return(account.Account{}, errors.New("db down"))
+			},
+			payload:        `{"document_number":"12345678900"}`,
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   `{"error": "error creating account"}`,
+		},
+	}
 
-	payload := bytes.NewBufferString(`{"document_number":"12345678900"}`)
-	req := httptest.NewRequest(http.MethodPost, "/accounts", payload)
-	w := httptest.NewRecorder()
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mockRepository := new(account.MockAccountRepository)
+			accountService := account.NewService(mockRepository)
+			if test.setup != nil {
+				test.setup(mockRepository)
+			}
+			api := NewAPIServer(accountService)
 
-	api.Routes().ServeHTTP(w, req)
+			req := httptest.NewRequest(http.MethodPost, test.path, bytes.NewBufferString(test.payload))
+			w := httptest.NewRecorder()
 
-	res := w.Result()
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	require.NoError(t, err)
+			api.Routes().ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusCreated, res.StatusCode)
-	assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
-	assert.JSONEq(t, `{"account_id":1,"document_number":"12345678900"}`, string(body))
-	mockRepository.AssertExpectations(t)
+			res := w.Result()
+			defer res.Body.Close()
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+
+			assert.Equal(t, test.expectedStatus, res.StatusCode)
+			assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
+			assert.JSONEq(t, test.expectedBody, string(body))
+			mockRepository.AssertExpectations(t)
+		})
+	}
 }
-
-// todo: test cases for create account endpoint for each error possible

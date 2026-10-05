@@ -63,7 +63,10 @@ func (a *APIServer) postAccountHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	createdAccount, err := a.accountService.CreateAccount(r.Context(), acc.DocumentNumber)
-	if err != nil {
+	if errors.Is(err, account.ErrFieldDocumentNumberMissing) {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	} else if err != nil {
 		writeError(w, http.StatusInternalServerError, "error creating account")
 		return
 	}
