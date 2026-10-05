@@ -44,7 +44,7 @@ func TestServiceGetAccountExpectNotFound(t *testing.T) {
 
 func TestCreateAccountExpectOk(t *testing.T) {
 	mockRepository := new(MockAccountRepository)
-	mockRepository.On("SaveAccount", Account{DocumentNumber: "12345678900"}).Return(Account{AccountID: 1, DocumentNumber: "12345678900"}, nil)
+	mockRepository.On("Save", Account{DocumentNumber: "12345678900"}).Return(Account{AccountID: 1, DocumentNumber: "12345678900"}, nil)
 
 	service := NewService(mockRepository)
 
@@ -67,7 +67,7 @@ func TestCreateAccountExpectMissingField(t *testing.T) {
 
 	expectedAcc := Account{}
 
-	mockRepository.AssertNotCalled(t, "SaveAccount", mock.Anything)
+	mockRepository.AssertNotCalled(t, "Save", mock.Anything)
 
 	assert.Equal(t, expectedAcc, acc)
 	assert.ErrorIs(t, err, ErrFieldDocumentNumberMissing)
