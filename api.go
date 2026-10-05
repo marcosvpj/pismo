@@ -62,7 +62,7 @@ func (a *APIServer) postAccountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	createdAccount, err := a.accountService.CreateAccount(r.Context(), acc)
+	createdAccount, err := a.accountService.CreateAccount(r.Context(), acc.DocumentNumber)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "error creating account")
 		return

@@ -21,10 +21,10 @@ func (s *Service) GetAccount(ctx context.Context, accountID int) (Account, error
 	return s.repository.FindByID(ctx, accountID)
 }
 
-func (s *Service) CreateAccount(ctx context.Context, account Account) (Account, error) {
-	if account.DocumentNumber == "" {
+func (s *Service) CreateAccount(ctx context.Context, documentNnumber string) (Account, error) {
+	if documentNnumber == "" {
 		return Account{}, ErrFieldDocumentNumberMissing
 	}
 
-	return s.repository.Save(ctx, account)
+	return s.repository.Save(ctx, Account{DocumentNumber: documentNnumber})
 }

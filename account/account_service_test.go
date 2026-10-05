@@ -48,7 +48,7 @@ func TestCreateAccountExpectOk(t *testing.T) {
 
 	service := NewService(mockRepository)
 
-	acc, err := service.CreateAccount(t.Context(), Account{DocumentNumber: "12345678900"})
+	acc, err := service.CreateAccount(t.Context(), "12345678900")
 
 	expectedAcc := Account{AccountID: 1, DocumentNumber: "12345678900"}
 
@@ -63,7 +63,7 @@ func TestCreateAccountExpectMissingField(t *testing.T) {
 
 	service := NewService(mockRepository)
 
-	acc, err := service.CreateAccount(t.Context(), Account{DocumentNumber: ""})
+	acc, err := service.CreateAccount(t.Context(), "")
 
 	expectedAcc := Account{}
 
