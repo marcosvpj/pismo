@@ -92,7 +92,20 @@ func (a *APIServer) postTransactionHandler(w http.ResponseWriter, r *http.Reques
 	var tInput createTransactionRequest
 	err := json.NewDecoder(r.Body).Decode(&tInput)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid transaction data")
+		writeError(w, http.StatusBadRequest, "invalid json")
+		return
+	}
+
+	if tInput.AccountID == 0 {
+		writeError(w, http.StatusBadRequest, "account_id is required")
+		return
+	}
+	if tInput.OperationTypeID == 0 {
+		writeError(w, http.StatusBadRequest, "operation_type_id is required")
+		return
+	}
+	if tInput.Amount.IsZero() {
+		writeError(w, http.StatusBadRequest, "amount is required")
 		return
 	}
 
@@ -104,7 +117,7 @@ func (a *APIServer) postTransactionHandler(w http.ResponseWriter, r *http.Reques
 
 	createdTransaction, err := a.transactionService.CreateTransaction(r.Context(), newTransaction)
 	if errors.Is(err, transaction.ErrInvalidAccount) {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	} else if err != nil {
 		writeError(w, http.StatusInternalServerError, "error creating transaction")

@@ -201,9 +201,8 @@ func TestCreateAccountEndpoint(t *testing.T) {
 }
 
 func TestCreateTransactionEndpoint(t *testing.T) {
-	// t.SkipNow()
 	now := func() time.Time { return time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC) }
-	// eventDate := time.Date(2020, 1, 1, 10, 32, 7, 719922200, time.UTC)
+
 	tests := []struct {
 		name           string
 		path           string
@@ -233,6 +232,56 @@ func TestCreateTransactionEndpoint(t *testing.T) {
 			payload:        `{"account_id": 1,"operation_type_id": 3,"amount": -123.45}`,
 			expectedStatus: http.StatusCreated,
 			expectedBody:   `{"transaction_id":1,"account_id": 1,"operation_type_id": 3,"amount": -123.45, "event_date":"2009-11-17T20:34:58.651387237Z"}`,
+		},
+		{
+			name:           "Create transaction with missing account_id",
+			path:           "/transactions",
+			payload:        `{"operation_type_id": 3,"amount": -123.45}`,
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error": "account_id is required"}`,
+		},
+		{
+			name:           "Create transaction with missing operation_type_id",
+			path:           "/transactions",
+			payload:        `{"account_id": 1,"amount": -123.45}`,
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error": "operation_type_id is required"}`,
+		},
+		{
+			name:           "Create transaction with missing amount",
+			path:           "/transactions",
+			payload:        `{"account_id": 1,"operation_type_id": 3}`,
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error": "amount is required"}`,
+		},
+		{
+			name:           "Create transaction with invalid JSON",
+			path:           "/transactions",
+			payload:        `{"invalid`,
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error": "invalid json"}`,
+		},
+		{
+			name: "Create transaction with error 500",
+			path: "/transactions",
+			setup: func(ma *account.MockAccountRepository, mt *transaction.MockTransactionRepository) {
+				ma.On("FindByID", 1).Return(account.Account{AccountID: 1, DocumentNumber: "12345678900"}, nil)
+				mt.On("Save", transaction.Transaction{AccountID: 1, OperationTypeID: transaction.Withdrawal, Amount: decimal.RequireFromString("-123.45"), EventDate: now()}).Return(transaction.Transaction{}, errors.New("db down"))
+			},
+			payload:        `{"account_id": 1,"operation_type_id": 3,"amount": -123.45}`,
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   `{"error": "error creating transaction"}`,
+		},
+		{
+			name: "Create transaction with invalid account",
+			path: "/transactions",
+			setup: func(ma *account.MockAccountRepository, mt *transaction.MockTransactionRepository) {
+				ma.On("FindByID", 1).Return(account.Account{}, account.ErrNotFound)
+				mt.On("Save", transaction.Transaction{AccountID: 1, OperationTypeID: transaction.Withdrawal, Amount: decimal.RequireFromString("-123.45"), EventDate: now()}).Return(transaction.Transaction{}, errors.New("db down"))
+			},
+			payload:        `{"account_id": 1,"operation_type_id": 3,"amount": -123.45}`,
+			expectedStatus: http.StatusUnprocessableEntity,
+			expectedBody:   `{"error": "invalid account"}`,
 		},
 	}
 
