@@ -7,23 +7,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/marcosvpj/pismo/account"
-	"github.com/marcosvpj/pismo/transaction"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateAndRetrieveAccount(t *testing.T) {
-	now := func() time.Time { return time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC) }
-
-	accountRepository := account.NewMemoryRepository()
-	transactionRepository := transaction.NewMemoryRepository()
-
-	accountService := account.NewService(accountRepository)
-	transactionService := transaction.NewService(transactionRepository, accountRepository, now)
-	server := httptest.NewServer(NewAPIServer(accountService, transactionService).Routes())
-
+	server := httptest.NewServer(newApp(fixedNow).Routes())
 	defer server.Close()
 
 	expected := account.Account{

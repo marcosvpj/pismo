@@ -8,13 +8,15 @@ import (
 )
 
 func main() {
-	now := func() time.Time { return time.Now().UTC() }
+	newApp(func() time.Time { return time.Now().UTC() }).Serve()
+}
 
+func newApp(now func() time.Time) *APIServer {
 	accountRepository := account.NewMemoryRepository()
-	accountService := account.NewService(accountRepository)
-
 	transactionRepository := transaction.NewMemoryRepository()
-	transactionService := transaction.NewService(transactionRepository, accountRepository, now)
 
-	NewAPIServer(accountService, transactionService).Serve()
+	return NewAPIServer(
+		account.NewService(accountRepository),
+		transaction.NewService(transactionRepository, accountRepository, now),
+	)
 }

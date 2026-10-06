@@ -1,11 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,28 +16,56 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func fixedNow() time.Time {
+	return time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC)
+}
+
+type testAPI struct {
+	handler      http.Handler
+	accounts     *account.MockAccountRepository
+	transactions *transaction.MockTransactionRepository
+}
+
+func newTestAPI(t *testing.T) testAPI {
+	t.Helper()
+
+	accounts := new(account.MockAccountRepository)
+	transactions := new(transaction.MockTransactionRepository)
+	accounts.Test(t)
+	transactions.Test(t)
+	t.Cleanup(func() {
+		accounts.AssertExpectations(t)
+		transactions.AssertExpectations(t)
+	})
+
+	api := NewAPIServer(
+		account.NewService(accounts),
+		transaction.NewService(transactions, accounts, fixedNow),
+	)
+	return testAPI{handler: api.Routes(), accounts: accounts, transactions: transactions}
+}
+
+func (a testAPI) request(t *testing.T, method, path, body string) (*http.Response, string) {
+	t.Helper()
+
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	w := httptest.NewRecorder()
+	a.handler.ServeHTTP(w, req)
+
+	res := w.Result()
+	t.Cleanup(func() { res.Body.Close() })
+	b, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+	return res, string(b)
+}
+
 func TestGetHealth(t *testing.T) {
-	now := func() time.Time { return time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC) }
-	mockAccountRepository := new(account.MockAccountRepository)
-	mockTransactionRepository := new(transaction.MockTransactionRepository)
-	accountService := account.NewService(mockAccountRepository)
-	transactionService := transaction.NewService(mockTransactionRepository, mockAccountRepository, now)
-	server := httptest.NewServer(NewAPIServer(accountService, transactionService).Routes())
-	defer server.Close()
+	api := newTestAPI(t)
 
-	res, err := http.Get(server.URL + "/health")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	res, body := api.request(t, http.MethodGet, "/health", "")
 
 	assert.Equal(t, http.StatusOK, res.StatusCode)
-	assert.JSONEq(t, `{"status":"ok"}`, string(body))
+	assert.JSONEq(t, `{"status":"ok"}`, body)
 }
 
 func TestGetAccountEndpoint(t *testing.T) {
@@ -97,30 +125,16 @@ func TestGetAccountEndpoint(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			now := func() time.Time { return time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC) }
-			mockAccountRepository := new(account.MockAccountRepository)
-			mockTransactionRepository := new(transaction.MockTransactionRepository)
-			accountService := account.NewService(mockAccountRepository)
-			transactionService := transaction.NewService(mockTransactionRepository, mockAccountRepository, now)
+			api := newTestAPI(t)
 			if test.setup != nil {
-				test.setup(mockAccountRepository)
+				test.setup(api.accounts)
 			}
-			api := NewAPIServer(accountService, transactionService)
 
-			req := httptest.NewRequest(http.MethodGet, test.path, nil)
-			w := httptest.NewRecorder()
-
-			api.Routes().ServeHTTP(w, req)
-
-			res := w.Result()
-			defer res.Body.Close()
-			body, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
+			res, body := api.request(t, http.MethodGet, test.path, "")
 
 			assert.Equal(t, test.expectedStatus, res.StatusCode)
 			assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
-			assert.JSONEq(t, test.expectedBody, string(body))
-			mockAccountRepository.AssertExpectations(t)
+			assert.JSONEq(t, test.expectedBody, body)
 		})
 	}
 }
@@ -172,36 +186,22 @@ func TestCreateAccountEndpoint(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			now := func() time.Time { return time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC) }
-			mockAccountRepository := new(account.MockAccountRepository)
-			mockTransactionRepository := new(transaction.MockTransactionRepository)
-			accountService := account.NewService(mockAccountRepository)
-			transactionService := transaction.NewService(mockTransactionRepository, mockAccountRepository, now)
+			api := newTestAPI(t)
 			if test.setup != nil {
-				test.setup(mockAccountRepository)
+				test.setup(api.accounts)
 			}
-			api := NewAPIServer(accountService, transactionService)
 
-			req := httptest.NewRequest(http.MethodPost, test.path, bytes.NewBufferString(test.payload))
-			w := httptest.NewRecorder()
-
-			api.Routes().ServeHTTP(w, req)
-
-			res := w.Result()
-			defer res.Body.Close()
-			body, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
+			res, body := api.request(t, http.MethodPost, test.path, test.payload)
 
 			assert.Equal(t, test.expectedStatus, res.StatusCode)
 			assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
-			assert.JSONEq(t, test.expectedBody, string(body))
-			mockAccountRepository.AssertExpectations(t)
+			assert.JSONEq(t, test.expectedBody, body)
 		})
 	}
 }
 
 func TestCreateTransactionEndpoint(t *testing.T) {
-	now := func() time.Time { return time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC) }
+	now := fixedNow
 
 	tests := []struct {
 		name           string
@@ -282,34 +282,30 @@ func TestCreateTransactionEndpoint(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   `{"error":"error creating transaction"}`,
 		},
+		{
+			name: "Create transaction with nonexistent account",
+			path: "/transactions",
+			setup: func(ma *account.MockAccountRepository, mt *transaction.MockTransactionRepository) {
+				ma.On("FindByID", 1).Return(account.Account{}, account.ErrNotFound)
+			},
+			payload:        `{"account_id": 1,"operation_type_id": 3,"amount": -123.45}`,
+			expectedStatus: http.StatusUnprocessableEntity,
+			expectedBody:   `{"error":"invalid account"}`,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mockAccountRepository := new(account.MockAccountRepository)
-			mockTransactionRepository := new(transaction.MockTransactionRepository)
-			accountService := account.NewService(mockAccountRepository)
-			transactionService := transaction.NewService(mockTransactionRepository, mockAccountRepository, now)
+			api := newTestAPI(t)
 			if test.setup != nil {
-				test.setup(mockAccountRepository, mockTransactionRepository)
+				test.setup(api.accounts, api.transactions)
 			}
-			api := NewAPIServer(accountService, transactionService)
 
-			req := httptest.NewRequest(http.MethodPost, test.path, bytes.NewBufferString(test.payload))
-			w := httptest.NewRecorder()
-
-			api.Routes().ServeHTTP(w, req)
-
-			res := w.Result()
-			defer res.Body.Close()
-			body, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
+			res, body := api.request(t, http.MethodPost, test.path, test.payload)
 
 			assert.Equal(t, test.expectedStatus, res.StatusCode)
 			assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
-			assert.JSONEq(t, test.expectedBody, string(body))
-			mockAccountRepository.AssertExpectations(t)
-			mockTransactionRepository.AssertExpectations(t)
+			assert.JSONEq(t, test.expectedBody, body)
 		})
 	}
 }
