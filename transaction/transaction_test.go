@@ -41,7 +41,7 @@ func TestValidOperationTypeIDIsValid(t *testing.T) {
 			operationTypeId: 5,
 			expected:        false,
 		}, {
-			name:            "Invalid operation ID",
+			name:            "Invalid operation ID zero",
 			expectedName:    "Operation invalid",
 			operationTypeId: 0,
 			expected:        false,
@@ -91,6 +91,25 @@ func TestNewTransaction(t *testing.T) {
 			assert.True(t, expectedAmount.Equal(tr.Amount), "expected %s, got %s", expectedAmount, tr.Amount)
 			assert.Equal(t, 1, tr.AccountID)
 			assert.Equal(t, OperationType(test.operationTypeID), tr.OperationTypeID)
+		})
+	}
+}
+
+func TestIsDebt(t *testing.T) {
+	tests := []struct {
+		name          string
+		operationType OperationType
+		expected      bool
+	}{
+		{name: "Normal purchase", operationType: NormalPurchase, expected: true},
+		{name: "Normal purchase with installments", operationType: PurchaseWithInstallments, expected: true},
+		{name: "Withdrawal", operationType: Withdrawal, expected: true},
+		{name: "Credit voucher", operationType: CreditVoucher, expected: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, test.operationType.IsDebit())
 		})
 	}
 }
