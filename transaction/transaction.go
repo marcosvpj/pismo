@@ -61,7 +61,7 @@ func (o OperationType) IsDebit() bool {
 }
 
 func NewTransaction(accountID int, opType OperationType, amount decimal.Decimal) (Transaction, error) {
-	if amount.Exponent() < -2 {
+	if !amount.Equal(amount.Round(2)) {
 		return Transaction{}, ErrInvalidDecimalSize
 	}
 

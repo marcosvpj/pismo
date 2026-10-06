@@ -273,15 +273,14 @@ func TestCreateTransactionEndpoint(t *testing.T) {
 			expectedBody:   `{"error": "error creating transaction"}`,
 		},
 		{
-			name: "Create transaction with invalid account",
+			name: "Create transaction with account repository error",
 			path: "/transactions",
 			setup: func(ma *account.MockAccountRepository, mt *transaction.MockTransactionRepository) {
-				ma.On("FindByID", 1).Return(account.Account{}, account.ErrNotFound)
-				mt.On("Save", transaction.Transaction{AccountID: 1, OperationTypeID: transaction.Withdrawal, Amount: decimal.RequireFromString("-123.45"), EventDate: now()}).Return(transaction.Transaction{}, errors.New("db down"))
+				ma.On("FindByID", 1).Return(account.Account{}, errors.New("db down"))
 			},
 			payload:        `{"account_id": 1,"operation_type_id": 3,"amount": -123.45}`,
-			expectedStatus: http.StatusUnprocessableEntity,
-			expectedBody:   `{"error": "invalid account"}`,
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   `{"error":"error creating transaction"}`,
 		},
 	}
 
@@ -310,6 +309,7 @@ func TestCreateTransactionEndpoint(t *testing.T) {
 			assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
 			assert.JSONEq(t, test.expectedBody, string(body))
 			mockAccountRepository.AssertExpectations(t)
+			mockTransactionRepository.AssertExpectations(t)
 		})
 	}
 }

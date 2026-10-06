@@ -26,9 +26,12 @@ func NewService(repository Repository, accountRepository account.Repository, now
 
 func (s *Service) CreateTransaction(ctx context.Context, transaction Transaction) (Transaction, error) {
 	_, err := s.accountRepository.FindByID(ctx, transaction.AccountID)
-	if err != nil {
+	if errors.Is(err, account.ErrNotFound) {
 		return Transaction{}, ErrInvalidAccount
+	} else if err != nil {
+		return Transaction{}, err
 	}
+
 	transaction.EventDate = s.now()
 	return s.repository.Save(ctx, transaction)
 }

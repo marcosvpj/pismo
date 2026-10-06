@@ -51,6 +51,7 @@ func (a *APIServer) getAccountHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
 	} else if err != nil {
+		log.Printf("get account: %v", err)
 		writeError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
@@ -75,6 +76,7 @@ func (a *APIServer) postAccountHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	} else if err != nil {
+		log.Printf("create account: %v", err)
 		writeError(w, http.StatusInternalServerError, "error creating account")
 		return
 	}
@@ -111,7 +113,7 @@ func (a *APIServer) postTransactionHandler(w http.ResponseWriter, r *http.Reques
 
 	newTransaction, err := transaction.NewTransaction(tInput.AccountID, transaction.OperationType(tInput.OperationTypeID), tInput.Amount)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid transaction data")
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -120,6 +122,7 @@ func (a *APIServer) postTransactionHandler(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	} else if err != nil {
+		log.Printf("create transaction %v", err)
 		writeError(w, http.StatusInternalServerError, "error creating transaction")
 		return
 	}

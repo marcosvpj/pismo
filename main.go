@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	now := func() time.Time { return time.Now() }
+	now := func() time.Time { return time.Now().UTC() }
 
 	accountRepository := account.NewMemoryRepository()
 	accountService := account.NewService(accountRepository)
