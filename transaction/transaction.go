@@ -8,11 +8,11 @@ import (
 )
 
 type Transaction struct {
-	TransactionID   int
-	AccountID       int
-	OperationTypeID OperationType
-	Amount          decimal.Decimal
-	EventDate       time.Time
+	TransactionID   int             `json:"transaction_id"`
+	AccountID       int             `json:"account_id"`
+	OperationTypeID OperationType   `json:"operation_type_id"`
+	Amount          decimal.Decimal `json:"amount"`
+	EventDate       time.Time       `json:"event_date"`
 }
 
 var ErrInvalidOperationType = errors.New("invalid operation type")

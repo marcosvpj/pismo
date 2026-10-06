@@ -9,14 +9,17 @@ import (
 	"testing"
 
 	"github.com/marcosvpj/pismo/account"
+	"github.com/marcosvpj/pismo/transaction"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetHealth(t *testing.T) {
-	repository := account.NewMemoryRepository()
-	service := account.NewService(repository)
-	server := httptest.NewServer(NewAPIServer(service).Routes())
+	mockAccountRepository := new(account.MockAccountRepository)
+	mockTransactionRepository := new(transaction.MockTransactionRepository)
+	accountService := account.NewService(mockAccountRepository)
+	transactionService := transaction.NewService(mockTransactionRepository, mockAccountRepository)
+	server := httptest.NewServer(NewAPIServer(accountService, transactionService).Routes())
 	defer server.Close()
 
 	res, err := http.Get(server.URL + "/health")
@@ -91,12 +94,14 @@ func TestGetAccountEndpoint(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mockRepository := new(account.MockAccountRepository)
-			accountService := account.NewService(mockRepository)
+			mockAccountRepository := new(account.MockAccountRepository)
+			mockTransactionRepository := new(transaction.MockTransactionRepository)
+			accountService := account.NewService(mockAccountRepository)
+			transactionService := transaction.NewService(mockTransactionRepository, mockAccountRepository)
 			if test.setup != nil {
-				test.setup(mockRepository)
+				test.setup(mockAccountRepository)
 			}
-			api := NewAPIServer(accountService)
+			api := NewAPIServer(accountService, transactionService)
 
 			req := httptest.NewRequest(http.MethodGet, test.path, nil)
 			w := httptest.NewRecorder()
@@ -111,7 +116,7 @@ func TestGetAccountEndpoint(t *testing.T) {
 			assert.Equal(t, test.expectedStatus, res.StatusCode)
 			assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
 			assert.JSONEq(t, test.expectedBody, string(body))
-			mockRepository.AssertExpectations(t)
+			mockAccountRepository.AssertExpectations(t)
 		})
 	}
 }
@@ -163,12 +168,14 @@ func TestCreateAccountEndpoint(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mockRepository := new(account.MockAccountRepository)
-			accountService := account.NewService(mockRepository)
+			mockAccountRepository := new(account.MockAccountRepository)
+			mockTransactionRepository := new(transaction.MockTransactionRepository)
+			accountService := account.NewService(mockAccountRepository)
+			transactionService := transaction.NewService(mockTransactionRepository, mockAccountRepository)
 			if test.setup != nil {
-				test.setup(mockRepository)
+				test.setup(mockAccountRepository)
 			}
-			api := NewAPIServer(accountService)
+			api := NewAPIServer(accountService, transactionService)
 
 			req := httptest.NewRequest(http.MethodPost, test.path, bytes.NewBufferString(test.payload))
 			w := httptest.NewRecorder()
@@ -183,7 +190,7 @@ func TestCreateAccountEndpoint(t *testing.T) {
 			assert.Equal(t, test.expectedStatus, res.StatusCode)
 			assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
 			assert.JSONEq(t, test.expectedBody, string(body))
-			mockRepository.AssertExpectations(t)
+			mockAccountRepository.AssertExpectations(t)
 		})
 	}
 }

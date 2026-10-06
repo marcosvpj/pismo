@@ -9,13 +9,19 @@ import (
 	"testing"
 
 	"github.com/marcosvpj/pismo/account"
+	"github.com/marcosvpj/pismo/transaction"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateAndRetrieveAccount(t *testing.T) {
-	repository := account.NewMemoryRepository()
-	service := account.NewService(repository)
-	server := httptest.NewServer(NewAPIServer(service).Routes())
+
+	accountRepository := account.NewMemoryRepository()
+	transactionRepository := transaction.NewMemoryRepository()
+
+	accountService := account.NewService(accountRepository)
+	transactionService := transaction.NewService(transactionRepository, accountRepository)
+	server := httptest.NewServer(NewAPIServer(accountService, transactionService).Routes())
+
 	defer server.Close()
 
 	expected := account.Account{

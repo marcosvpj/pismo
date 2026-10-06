@@ -9,10 +9,13 @@ import (
 	"time"
 
 	"github.com/marcosvpj/pismo/account"
+	"github.com/marcosvpj/pismo/transaction"
+	"github.com/shopspring/decimal"
 )
 
 type APIServer struct {
-	accountService *account.Service
+	accountService     *account.Service
+	transactionService *transaction.Service
 }
 
 type errorResponse struct {
@@ -29,9 +32,10 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 	_ = json.NewEncoder(w).Encode(value)
 }
 
-func NewAPIServer(accountService *account.Service) *APIServer {
+func NewAPIServer(accountService *account.Service, transactionService *transaction.Service) *APIServer {
 	return &APIServer{
-		accountService: accountService,
+		accountService:     accountService,
+		transactionService: transactionService,
 	}
 }
 
@@ -78,6 +82,39 @@ func (a *APIServer) postAccountHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, createdAccount)
 }
 
+type createTransactionRequest struct {
+	AccountID       int             `json:"account_id"`
+	OperationTypeID int             `json:"operation_type_id"`
+	Amount          decimal.Decimal `json:"amount"`
+}
+
+func (a *APIServer) postTransactionHandler(w http.ResponseWriter, r *http.Request) {
+	var tInput createTransactionRequest
+	err := json.NewDecoder(r.Body).Decode(&tInput)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid transaction data")
+		return
+	}
+
+	newTransaction, err := transaction.NewTransaction(tInput.AccountID, transaction.OperationType(tInput.OperationTypeID), tInput.Amount, time.Now())
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid transaction data")
+		return
+	}
+
+	createdTransaction, err := a.transactionService.CreateTransaction(r.Context(), newTransaction)
+	if errors.Is(err, transaction.ErrInvalidAccount) {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	} else if err != nil {
+		writeError(w, http.StatusInternalServerError, "error creating transaction")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, createdTransaction)
+
+}
+
 func (a *APIServer) getHealthHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
@@ -86,6 +123,7 @@ func (a *APIServer) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /accounts/{account_id}", a.getAccountHandler)
 	mux.HandleFunc("POST /accounts", a.postAccountHandler)
+	mux.HandleFunc("POST /transactions", a.postTransactionHandler)
 	mux.HandleFunc("GET /health", a.getHealthHandler)
 	return mux
 }

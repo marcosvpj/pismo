@@ -57,7 +57,7 @@ func TestValidOperationTypeIDIsValid(t *testing.T) {
 	}
 }
 
-func TestCreateValidTransaction(t *testing.T) {
+func TestNewTransaction(t *testing.T) {
 	tests := []struct {
 		name            string
 		operationTypeID int
@@ -66,7 +66,7 @@ func TestCreateValidTransaction(t *testing.T) {
 		expectedError   error
 	}{
 		{name: "Valid normal purchase", operationTypeID: 1, amount: "-100", expectedAmount: "-100"},
-		{name: "Invalid normal purchase", operationTypeID: 1, amount: "100", expectedAmount: "-100"},
+		{name: "Positive value normal purchase", operationTypeID: 1, amount: "100", expectedAmount: "-100"},
 		{name: "Not valid transaction", operationTypeID: 10, amount: "-100", expectedError: ErrInvalidOperationType},
 		{name: "Normal purchase is negative", operationTypeID: 1, amount: "50.00", expectedAmount: "-50"},
 		{name: "Purchase with installments is negative", operationTypeID: 2, amount: "23.5", expectedAmount: "-23.5"},
@@ -77,7 +77,7 @@ func TestCreateValidTransaction(t *testing.T) {
 		{name: "Negative credit voucher is positive", operationTypeID: 4, amount: "-60", expectedAmount: "60"},
 		{name: "Unknown operation type", operationTypeID: 5, amount: "50", expectedError: ErrInvalidOperationType},
 		{name: "Zero operation type", operationTypeID: 0, amount: "50", expectedError: ErrInvalidOperationType},
-		{name: "Too many decimals", operationTypeID: 0, amount: "50.123", expectedError: ErrInvalidDecimalSize},
+		{name: "Too many decimals", operationTypeID: 1, amount: "50.123", expectedError: ErrInvalidDecimalSize},
 	}
 
 	for _, test := range tests {
@@ -88,8 +88,6 @@ func TestCreateValidTransaction(t *testing.T) {
 			if err != nil {
 				return
 			}
-
-			assert.NoError(t, err)
 
 			expectedAmount := decimal.RequireFromString(test.expectedAmount)
 			assert.True(t, expectedAmount.Equal(tr.Amount), "expected %s, got %s", expectedAmount, tr.Amount)
