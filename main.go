@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"time"
 
 	"github.com/marcosvpj/pismo/account"
@@ -8,7 +9,11 @@ import (
 )
 
 func main() {
-	newApp(func() time.Time { return time.Now().UTC() }).Serve()
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	newApp(func() time.Time { return time.Now().UTC() }).Serve(":" + port)
 }
 
 func newApp(now func() time.Time) *APIServer {

@@ -144,11 +144,11 @@ func (a *APIServer) Routes() http.Handler {
 	return mux
 }
 
-func (a *APIServer) Serve() {
-	log.Println("Starting server on port :8080")
+func (a *APIServer) Serve(addr string) {
+	log.Printf("Starting server on %s", addr)
 
 	server := &http.Server{
-		Addr:         ":8080",
+		Addr:         addr,
 		Handler:      a.Routes(),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 15 * time.Second,
