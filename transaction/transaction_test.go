@@ -2,7 +2,6 @@ package transaction
 
 import (
 	"testing"
-	"time"
 
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
@@ -81,9 +80,8 @@ func TestNewTransaction(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		eventDate := time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC)
 		t.Run(test.name, func(t *testing.T) {
-			tr, err := NewTransaction(1, OperationType(test.operationTypeID), decimal.RequireFromString(test.amount), eventDate)
+			tr, err := NewTransaction(1, OperationType(test.operationTypeID), decimal.RequireFromString(test.amount))
 			require.ErrorIs(t, err, test.expectedError)
 			if err != nil {
 				return
@@ -93,7 +91,6 @@ func TestNewTransaction(t *testing.T) {
 			assert.True(t, expectedAmount.Equal(tr.Amount), "expected %s, got %s", expectedAmount, tr.Amount)
 			assert.Equal(t, 1, tr.AccountID)
 			assert.Equal(t, OperationType(test.operationTypeID), tr.OperationTypeID)
-			assert.Equal(t, eventDate, tr.EventDate)
 		})
 	}
 }

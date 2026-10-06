@@ -16,10 +16,11 @@ type Service struct {
 
 var ErrInvalidAccount = errors.New("invalid account")
 
-func NewService(repository Repository, accountRepository account.Repository) *Service {
+func NewService(repository Repository, accountRepository account.Repository, now func() time.Time) *Service {
 	return &Service{
 		repository:        repository,
 		accountRepository: accountRepository,
+		now:               now,
 	}
 }
 
@@ -28,6 +29,6 @@ func (s *Service) CreateTransaction(ctx context.Context, transaction Transaction
 	if err != nil {
 		return Transaction{}, ErrInvalidAccount
 	}
-
+	transaction.EventDate = s.now()
 	return s.repository.Save(ctx, transaction)
 }

@@ -60,7 +60,7 @@ func (o OperationType) IsDebit() bool {
 	}
 }
 
-func NewTransaction(accountID int, opType OperationType, amount decimal.Decimal, eventDate time.Time) (Transaction, error) {
+func NewTransaction(accountID int, opType OperationType, amount decimal.Decimal) (Transaction, error) {
 	if amount.Exponent() < -2 {
 		return Transaction{}, ErrInvalidDecimalSize
 	}
@@ -82,6 +82,5 @@ func NewTransaction(accountID int, opType OperationType, amount decimal.Decimal,
 		AccountID:       accountID,
 		OperationTypeID: opType,
 		Amount:          amount,
-		EventDate:       eventDate,
 	}, nil
 }

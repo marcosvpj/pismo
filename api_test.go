@@ -7,18 +7,21 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/marcosvpj/pismo/account"
 	"github.com/marcosvpj/pismo/transaction"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetHealth(t *testing.T) {
+	now := func() time.Time { return time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC) }
 	mockAccountRepository := new(account.MockAccountRepository)
 	mockTransactionRepository := new(transaction.MockTransactionRepository)
 	accountService := account.NewService(mockAccountRepository)
-	transactionService := transaction.NewService(mockTransactionRepository, mockAccountRepository)
+	transactionService := transaction.NewService(mockTransactionRepository, mockAccountRepository, now)
 	server := httptest.NewServer(NewAPIServer(accountService, transactionService).Routes())
 	defer server.Close()
 
@@ -94,10 +97,11 @@ func TestGetAccountEndpoint(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			now := func() time.Time { return time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC) }
 			mockAccountRepository := new(account.MockAccountRepository)
 			mockTransactionRepository := new(transaction.MockTransactionRepository)
 			accountService := account.NewService(mockAccountRepository)
-			transactionService := transaction.NewService(mockTransactionRepository, mockAccountRepository)
+			transactionService := transaction.NewService(mockTransactionRepository, mockAccountRepository, now)
 			if test.setup != nil {
 				test.setup(mockAccountRepository)
 			}
@@ -168,12 +172,78 @@ func TestCreateAccountEndpoint(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			now := func() time.Time { return time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC) }
 			mockAccountRepository := new(account.MockAccountRepository)
 			mockTransactionRepository := new(transaction.MockTransactionRepository)
 			accountService := account.NewService(mockAccountRepository)
-			transactionService := transaction.NewService(mockTransactionRepository, mockAccountRepository)
+			transactionService := transaction.NewService(mockTransactionRepository, mockAccountRepository, now)
 			if test.setup != nil {
 				test.setup(mockAccountRepository)
+			}
+			api := NewAPIServer(accountService, transactionService)
+
+			req := httptest.NewRequest(http.MethodPost, test.path, bytes.NewBufferString(test.payload))
+			w := httptest.NewRecorder()
+
+			api.Routes().ServeHTTP(w, req)
+
+			res := w.Result()
+			defer res.Body.Close()
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+
+			assert.Equal(t, test.expectedStatus, res.StatusCode)
+			assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
+			assert.JSONEq(t, test.expectedBody, string(body))
+			mockAccountRepository.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCreateTransactionEndpoint(t *testing.T) {
+	// t.SkipNow()
+	now := func() time.Time { return time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC) }
+	// eventDate := time.Date(2020, 1, 1, 10, 32, 7, 719922200, time.UTC)
+	tests := []struct {
+		name           string
+		path           string
+		setup          func(ma *account.MockAccountRepository, mt *transaction.MockTransactionRepository)
+		payload        string
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name: "Create transaction with positive amount",
+			path: "/transactions",
+			setup: func(ma *account.MockAccountRepository, mt *transaction.MockTransactionRepository) {
+				ma.On("FindByID", 1).Return(account.Account{AccountID: 1, DocumentNumber: "12345678900"}, nil)
+				mt.On("Save", transaction.Transaction{AccountID: 1, OperationTypeID: transaction.CreditVoucher, Amount: decimal.RequireFromString("123.45"), EventDate: now()}).Return(transaction.Transaction{TransactionID: 1, AccountID: 1, OperationTypeID: transaction.CreditVoucher, Amount: decimal.RequireFromString("123.45"), EventDate: now()}, nil)
+			},
+			payload:        `{"account_id": 1,"operation_type_id": 4,"amount": 123.45}`,
+			expectedStatus: http.StatusCreated,
+			expectedBody:   `{"transaction_id":1,"account_id": 1,"operation_type_id": 4,"amount": 123.45, "event_date":"2009-11-17T20:34:58.651387237Z"}`,
+		},
+		{
+			name: "Create transaction with negative amount",
+			path: "/transactions",
+			setup: func(ma *account.MockAccountRepository, mt *transaction.MockTransactionRepository) {
+				ma.On("FindByID", 1).Return(account.Account{AccountID: 1, DocumentNumber: "12345678900"}, nil)
+				mt.On("Save", transaction.Transaction{AccountID: 1, OperationTypeID: transaction.Withdrawal, Amount: decimal.RequireFromString("-123.45"), EventDate: now()}).Return(transaction.Transaction{TransactionID: 1, AccountID: 1, OperationTypeID: transaction.Withdrawal, Amount: decimal.RequireFromString("-123.45"), EventDate: now()}, nil)
+			},
+			payload:        `{"account_id": 1,"operation_type_id": 3,"amount": -123.45}`,
+			expectedStatus: http.StatusCreated,
+			expectedBody:   `{"transaction_id":1,"account_id": 1,"operation_type_id": 3,"amount": -123.45, "event_date":"2009-11-17T20:34:58.651387237Z"}`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mockAccountRepository := new(account.MockAccountRepository)
+			mockTransactionRepository := new(transaction.MockTransactionRepository)
+			accountService := account.NewService(mockAccountRepository)
+			transactionService := transaction.NewService(mockTransactionRepository, mockAccountRepository, now)
+			if test.setup != nil {
+				test.setup(mockAccountRepository, mockTransactionRepository)
 			}
 			api := NewAPIServer(accountService, transactionService)
 

@@ -96,7 +96,7 @@ func (a *APIServer) postTransactionHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	newTransaction, err := transaction.NewTransaction(tInput.AccountID, transaction.OperationType(tInput.OperationTypeID), tInput.Amount, time.Now())
+	newTransaction, err := transaction.NewTransaction(tInput.AccountID, transaction.OperationType(tInput.OperationTypeID), tInput.Amount)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid transaction data")
 		return
@@ -140,4 +140,8 @@ func (a *APIServer) Serve() {
 	}
 
 	log.Fatal(server.ListenAndServe())
+}
+
+func init() {
+	decimal.MarshalJSONWithoutQuotes = true
 }
