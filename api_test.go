@@ -162,7 +162,7 @@ func TestCreateAccountEndpoint(t *testing.T) {
 			path:           "/accounts",
 			payload:        `{invalid`,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   `{"error": "invalid account information"}`,
+			expectedBody:   `{"error": "invalid json"}`,
 		},
 	}
 

@@ -66,7 +66,7 @@ func (a *APIServer) postAccountHandler(w http.ResponseWriter, r *http.Request) {
 	var acc createAccountRequest
 	err := json.NewDecoder(r.Body).Decode(&acc)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid account information")
+		writeError(w, http.StatusBadRequest, "invalid json")
 		return
 	}
 
