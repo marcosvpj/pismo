@@ -129,6 +129,8 @@ func (a *APIServer) Routes() http.Handler {
 }
 
 func (a *APIServer) Serve() {
+	log.Println("Starting server on port :8080")
+
 	server := &http.Server{
 		Addr:         ":8080",
 		Handler:      a.Routes(),
