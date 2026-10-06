@@ -53,8 +53,6 @@ func (o OperationType) IsDebit() bool {
 	switch o {
 	case NormalPurchase, PurchaseWithInstallments, Withdrawal:
 		return true
-	case CreditVoucher:
-		return false
 	default:
 		return false
 	}
