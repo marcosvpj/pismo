@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+GO_IMAGE="golang:1.27"
+
+usage() {
+cat <<EOF
+Usage: ./run [command]
+
+Commands:
+up      Build and start the API on http://localhost:\${PORT:-8080} (default)
+test    Run the test suite (with race detector) inside a Go container
+down    Stop and remove the containers
+EOF
+}
+
+case "${1:-up}" in
+up)
+    docker compose up --build
+    ;;
+test)
+    docker run --rm -v "$PWD":/src -w /src "$GO_IMAGE" go test -race -cover ./...
+    ;;
+down)
+    docker compose down
+    ;;
+-h|--help|help)
+    usage
+    ;;
+*)
+    usage
+    exit 1
+    ;;
+esac
