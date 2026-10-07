@@ -2,6 +2,6 @@ services:
   app:
     build: .
     environment:
-      PORT: "8080"
+      PORT: "${PORT:-8080}"
     ports:
-      - "8080:8080"
+      - "${PORT:-8080}:${PORT:-8080}"
